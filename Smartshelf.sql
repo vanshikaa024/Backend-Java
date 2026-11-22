@@ -1,4 +1,4 @@
-CREATE DATABASE IF NOT EXISTS smartshelf;
+CREATE DATABASE smartshelf;
 
 USE smartshelf;
 
@@ -34,6 +34,17 @@ CREATE TABLE IF NOT EXISTS suppliers (
     phone VARCHAR(15),
     email VARCHAR(100),
     address VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+
+CREATE TABLE users (
+    user_id INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(20) DEFAULT 'STAFF',
+    status BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -165,4 +176,51 @@ ON stock_history(product_id);
 CREATE INDEX idx_notification_read
 ON notifications(is_read);
 
+
+
+
+CREATE TABLE IF NOT EXISTS sales (
+    sale_id INT PRIMARY KEY AUTO_INCREMENT,
+    sale_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    total_amount DECIMAL(12,2) NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS sale_items (
+    sale_item_id INT PRIMARY KEY AUTO_INCREMENT,
+    sale_id INT NOT NULL,
+    product_id INT NOT NULL,
+    quantity INT NOT NULL,
+    selling_price DECIMAL(10,2) NOT NULL,
+    cost_price DECIMAL(10,2) NOT NULL,
+    subtotal DECIMAL(12,2) NOT NULL,
+    FOREIGN KEY (sale_id) REFERENCES sales(sale_id),
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
+);
+
+CREATE TABLE IF NOT EXISTS stock_history (
+    history_id INT PRIMARY KEY AUTO_INCREMENT,
+    product_id INT NOT NULL,
+    transaction_type ENUM('PURCHASE','SALE','ADJUSTMENT') NOT NULL,
+    quantity INT NOT NULL,
+    previous_stock INT NOT NULL,
+    updated_stock INT NOT NULL,
+    purchase_id INT,
+    sale_id INT,
+    remarks VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (product_id) REFERENCES products(product_id),
+    FOREIGN KEY (purchase_id) REFERENCES purchases(purchase_id),
+    FOREIGN KEY (sale_id) REFERENCES sales(sale_id)
+);
+
+CREATE TABLE IF NOT EXISTS notifications (
+    notification_id INT PRIMARY KEY AUTO_INCREMENT,
+    product_id INT,
+    notification_type ENUM('LOW_STOCK','EXPIRY','EXPIRED','DAMAGED') NOT NULL,
+    message VARCHAR(255) NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
+);
 SHOW TABLES;
+

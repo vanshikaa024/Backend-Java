@@ -16,7 +16,6 @@ public class DBConnection {
                 URL, USER, PASSWORD
             );
 
-            System.out.println("Database Connected!");
             return con;
 
         } catch (SQLException e) {

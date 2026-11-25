@@ -1,4 +1,4 @@
-CREATE DATABASE smartshelf;
+CREATE DATABASE IF NOT EXISTS smartshelf;
 
 USE smartshelf;
 
@@ -65,18 +65,15 @@ CREATE TABLE IF NOT EXISTS purchase_items (
     purchase_id INT NOT NULL,
     product_id INT NOT NULL,
     quantity INT NOT NULL,
-    purchase_price DECIMAL(10,2) NOT NULL,
-    subtotal DECIMAL(12,2) NOT NULL,
-
+    unit_cost DECIMAL(10,2) NOT NULL,
+    batch_number VARCHAR(100),
+    expiry_date DATE,
     FOREIGN KEY (purchase_id)
         REFERENCES purchases(purchase_id),
-
     FOREIGN KEY (product_id)
         REFERENCES products(product_id),
-
     CHECK (quantity > 0),
-    CHECK (purchase_price >= 0),
-    CHECK (subtotal >= 0)
+    CHECK (unit_cost >= 0)
 );
 
 CREATE TABLE IF NOT EXISTS sales (

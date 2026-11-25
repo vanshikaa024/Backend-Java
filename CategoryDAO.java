@@ -1,6 +1,8 @@
 import java.sql.*;
 import java.util.*;
 
+import Database.DBConnection;
+
 public class CategoryDAO {
     public int add(String name) throws SQLException {
         try(Connection c=DBConnection.getConnection(); PreparedStatement p=c.prepareStatement("INSERT INTO categories(category_name) VALUES(?)",Statement.RETURN_GENERATED_KEYS)) {

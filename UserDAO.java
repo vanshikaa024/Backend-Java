@@ -1,6 +1,8 @@
 import java.sql.*;
 import java.util.Optional;
 
+import Database.DBConnection;
+
 public class UserDAO {
     public Optional<User> authenticate(String username) throws SQLException {
         String sql = "SELECT user_id, username, role, password_hash FROM users WHERE username=? AND status=TRUE";

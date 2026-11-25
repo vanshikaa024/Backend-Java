@@ -1,5 +1,8 @@
 import java.sql.*;
 import java.util.*;
+
+import Database.DBConnection;
+
 import java.math.BigDecimal;
 
 public class ProductDAO {

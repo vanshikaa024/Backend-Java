@@ -1,205 +1,144 @@
-
 package PurchaseManagement;
 
+import Database.DBConnection;
+import UI.ConsoleUtils;
+
 import java.math.BigDecimal;
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.LocalDate;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 
+/**
+ * Terminal menu for recording and viewing stock purchases.
+ */
 public class PurchaseMenu {
 
-    static Scanner sc = new Scanner(System.in);
-    static PurchaseService service = new PurchaseService();
+    private static final PurchaseService service = new PurchaseService();
+    private static final PurchaseDAO dao = new PurchaseDAO();
 
     public static void main(String[] args) {
+        try (Connection con = DBConnection.getConnection()) {
+            System.out.println("\nDatabase Connected: " + con.getCatalog());
+        } catch (SQLException e) {
+            System.out.println("Database Connection Failed: " + e.getMessage());
+            return;
+        }
+        try (Scanner sc = new Scanner(System.in)) {
+            run(sc);
+        }
+    }
 
+    public static void run(Scanner sc) {
         int choice;
-
         do {
-            System.out.println("\n========== SMARTSHELF PURCHASE MANAGEMENT ==========");
+            System.out.println("\n========== PURCHASE MANAGEMENT ==========");
             System.out.println("1. Create Purchase");
-            System.out.println("2. Exit");
-            System.out.print("Enter your choice: ");
+            System.out.println("2. View All Purchases");
+            System.out.println("3. View Purchase Items by Purchase ID");
+            System.out.println("4. Back");
+            choice = ConsoleUtils.readInt(sc, "Enter your choice: ");
 
             try {
-                choice = Integer.parseInt(sc.nextLine());
-
                 switch (choice) {
-                    case 1:
-                        createPurchase();
-                        break;
-
-                    case 2:
-                        System.out.println("Exiting Purchase Management...");
-                        break;
-
-                    default:
-                        System.out.println("Invalid choice.");
+                    case 1 -> createPurchase(sc);
+                    case 2 -> viewPurchases();
+                    case 3 -> viewPurchaseItems(sc);
+                    case 4 -> System.out.println("Returning to main menu...");
+                    default -> System.out.println("Invalid choice.");
                 }
-
-            } catch (NumberFormatException e) {
-                System.out.println("Enter a valid number.");
-                choice = 0;
-
             } catch (IllegalArgumentException e) {
                 System.out.println("Validation Error: " + e.getMessage());
-                choice = 0;
-
             } catch (SQLException e) {
                 System.out.println("Purchase operation failed: " + e.getMessage());
-                choice = 0;
             }
-
-        } while (choice != 2);
-
-        sc.close();
+        } while (choice != 4);
     }
 
-    private static int readPositiveInt(String message) {
-
-        while (true) {
-            System.out.print(message);
-
-            try {
-                int value = Integer.parseInt(sc.nextLine().trim());
-
-                if (value > 0) {
-                    return value;
-                }
-
-                System.out.println("Value must be greater than zero.");
-
-            } catch (NumberFormatException e) {
-                System.out.println("Enter a valid number.");
-            }
-        }
-    }
-
-    private static BigDecimal readPositiveAmount(String message) {
-
-        while (true) {
-            System.out.print(message);
-
-            try {
-                BigDecimal value = new BigDecimal(sc.nextLine().trim());
-
-                if (value.compareTo(BigDecimal.ZERO) > 0) {
-                    return value;
-                }
-
-                System.out.println("Amount must be greater than zero.");
-
-            } catch (NumberFormatException e) {
-                System.out.println("Enter a valid amount.");
-            }
-        }
-    }
-
-    private static LocalDate readExpiryDate() {
-
-        while (true) {
-            System.out.print("Enter Expiry Date (YYYY-MM-DD) or press Enter to skip: ");
-
-            String input = sc.nextLine().trim();
-
-            if (input.isEmpty()) {
-                return null;
-            }
-
-            try {
-                return LocalDate.parse(input);
-
-            } catch (DateTimeParseException e) {
-                System.out.println("Invalid date format.");
-            }
-        }
-    }
-
-    private static void createPurchase() throws SQLException {
-
+    private static void createPurchase(Scanner sc) throws SQLException {
         System.out.println("\n========== CREATE PURCHASE ==========");
-
-        int supplierId = readPositiveInt("Enter Supplier ID: ");
-
-        System.out.print("Enter Invoice Number: ");
-        String invoiceNumber = sc.nextLine().trim();
+        int supplierId = ConsoleUtils.readPositiveInt(sc, "Enter Supplier ID: ");
+        String invoiceNumber = ConsoleUtils.readNonEmpty(sc, "Enter Invoice Number: ");
 
         List<PurchaseItem> items = new ArrayList<>();
-
-        String more;
-
         do {
             System.out.println("\n---------- PRODUCT DETAILS ----------");
-
-            int productId = readPositiveInt("Enter Product ID: ");
-
-            int quantity = readPositiveInt("Enter Quantity: ");
-
-            BigDecimal unitCost = readPositiveAmount("Enter Purchase Price Per Unit: ");
-
-            System.out.print("Enter Batch Number: ");
+            int productId = ConsoleUtils.readPositiveInt(sc, "Enter Product ID: ");
+            int quantity = ConsoleUtils.readPositiveInt(sc, "Enter Quantity: ");
+            BigDecimal unitCost = ConsoleUtils.readPositiveAmount(sc, "Enter Purchase Price Per Unit: ");
+            System.out.print("Enter Batch Number (optional): ");
             String batchNumber = sc.nextLine().trim();
-
-            LocalDate expiryDate = readExpiryDate();
+            LocalDate expiryDate = ConsoleUtils.readOptionalDate(sc, "Enter Expiry Date (YYYY-MM-DD) or press Enter to skip: ");
 
             items.add(new PurchaseItem(
-                productId,
-                quantity,
-                unitCost,
-                batchNumber.isEmpty() ? null : batchNumber,
-                expiryDate
+                    productId,
+                    quantity,
+                    unitCost,
+                    batchNumber.isEmpty() ? null : batchNumber,
+                    expiryDate
             ));
+        } while (ConsoleUtils.confirm(sc, "Add another product? (Y/N): "));
 
-            System.out.print("Add another product? (Y/N): ");
-            more = sc.nextLine().trim();
-
-        } while (more.equalsIgnoreCase("Y"));
-
-        Purchase purchase = new Purchase(
-            supplierId,
-            invoiceNumber,
-            LocalDate.now(),
-            items
-        );
+        Purchase purchase = new Purchase(supplierId, invoiceNumber, LocalDate.now(), items);
 
         System.out.println("\n========== PURCHASE SUMMARY ==========");
-        System.out.println("Supplier ID: " + supplierId);
+        System.out.println("Supplier ID:    " + supplierId);
         System.out.println("Invoice Number: " + invoiceNumber);
-        System.out.println("Purchase Date: " + purchase.getPurchaseDate());
+        System.out.println("Purchase Date:  " + purchase.getPurchaseDate());
 
         BigDecimal total = BigDecimal.ZERO;
-
         for (PurchaseItem item : items) {
-
             System.out.println("--------------------------------");
-            System.out.println("Product ID: " + item.getProductId());
-            System.out.println("Quantity: " + item.getQuantity());
-            System.out.println("Unit Cost: " + item.getUnitCost());
-            System.out.println("Subtotal: " + item.getSubtotal());
-
+            System.out.println("Product ID: " + item.getProductId()
+                    + " | Qty: " + item.getQuantity()
+                    + " | Unit Cost: " + item.getUnitCost()
+                    + " | Subtotal: " + item.getSubtotal());
             total = total.add(item.getSubtotal());
         }
-
         System.out.println("--------------------------------");
         System.out.println("Total Purchase Amount: " + total);
 
-        System.out.print("\nConfirm Purchase? (Y/N): ");
-        String confirmation = sc.nextLine().trim();
-
-        if (confirmation.equalsIgnoreCase("Y")) {
-
+        if (ConsoleUtils.confirm(sc, "\nConfirm Purchase? (Y/N): ")) {
             if (service.addPurchase(purchase)) {
                 System.out.println("\nPurchase added successfully!");
-                System.out.println("Purchase ID: " + purchase.getPurchaseId());
+                System.out.println("Purchase ID:  " + purchase.getPurchaseId());
                 System.out.println("Total Amount: " + purchase.getTotalAmount());
-                System.out.println("Product stock updated successfully!");
+                System.out.println("Product stock & stock_history updated.");
             }
-
         } else {
             System.out.println("Purchase cancelled.");
+        }
+    }
+
+    private static void viewPurchases() throws SQLException {
+        List<Map<String, Object>> purchases = dao.getRecentPurchases();
+        System.out.println("\n========== PURCHASE HISTORY ==========");
+        if (purchases.isEmpty()) {
+            System.out.println("No purchases recorded.");
+            return;
+        }
+        for (Map<String, Object> p : purchases) {
+            System.out.printf("ID: %d | Supplier: %s (#%d) | Invoice: %s | Date: %s | Total: %s%n",
+                    p.get("purchaseId"), p.get("supplierName"), p.get("supplierId"),
+                    p.get("invoiceNumber"), p.get("purchaseDate"), p.get("totalAmount"));
+        }
+    }
+
+    private static void viewPurchaseItems(Scanner sc) throws SQLException {
+        int purchaseId = ConsoleUtils.readPositiveInt(sc, "Enter Purchase ID: ");
+        List<Map<String, Object>> items = dao.getPurchaseItems(purchaseId);
+        if (items.isEmpty()) {
+            System.out.println("No items found for purchase ID " + purchaseId);
+            return;
+        }
+        System.out.println("\n---------- ITEMS FOR PURCHASE #" + purchaseId + " ----------");
+        for (Map<String, Object> item : items) {
+            System.out.printf("Product #%d (%s) | Qty: %d | Unit Cost: %s | Batch: %s | Expiry: %s%n",
+                    item.get("productId"), item.get("productName"), item.get("quantity"),
+                    item.get("unitCost"), item.get("batchNumber"), item.get("expiryDate"));
         }
     }
 }

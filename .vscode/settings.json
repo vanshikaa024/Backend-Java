@@ -1,4 +1,14 @@
 {
+    "files.associations": {
+        "*.sql": "sql"
+    },
+    "java.project.sourcePaths": [
+        "src"
+    ],
+    "java.project.outputPath": "out",
+    "java.project.referencedLibraries": [
+        "lib/**/*.jar"
+    ],
     "sqltools.connections": [
         {
             "mysqlOptions": {
